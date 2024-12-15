@@ -1,2 +1,0 @@
-npm init -y
-npm install oracledb@5.2.0
