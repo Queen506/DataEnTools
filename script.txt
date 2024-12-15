@@ -1,0 +1,31 @@
+***  ให้ DROP Table ที่ไม่เกี่ยวข้องทั้งหมด  ให้เหลือแต่ Table ของ Project
+***  สั่งลบขยะออกจาก Schema ของ Database User ด้วยคำสั่ง   ....  PURGE Recyclebin
+***
+- Database Script 
+1) ดูรายละเอียดทั้งหมด
+SELECT table_name, constraint_Name, constraint_type , index_name
+FROM user_constraints
+ORDER BY table_name, constraint_type , constraint_Name;
+------
+2) ดูข้อมูลสรุปทั้งหมด
+SELECT constraint_type , table_name, Count(*)
+FROM user_constraints
+GROUP BY constraint_type , table_name
+ORDER BY constraint_type , table_name;
+------
+SELECT table_name, constraint_type , Count(*)
+FROM user_constraints
+GROUP BY table_name, constraint_type
+ORDER BY table_name, constraint_type;
+------
+3) การดูข้อมูลตาราง (Table) และกฎข้อบังคับ (Constraint) ที่สร้างขึ้นของ Database User
+SELECT OWNER , TABLE_NAME , CONSTRAINT_TYPE , CONSTRAINT_NAME , SEARCH_CONDITION , INDEX_OWNER , INDEX_NAME , R_OWNER , R_CONSTRAINT_NAME
+FROM USER_CONSTRAINTS
+ORDER BY TABLE_NAME , CONSTRAINT_TYPE , CONSTRAINT_NAME ;
+------
+4) การดูข้อมูล Stored Procedure ที่สร้างขึ้นของ Database User
+SELECT OBJECT_NAME , PROCEDURE_NAME , OBJECT_TYPE , AGGREGATE
+FROM USER_Procedures ORDER BY OBJECT_NAME , PROCEDURE_NAME ;
+------
+5) การดูข้อมูล Source Code ของ Stored Pocedure ที่สร้างขึ้นของ Database User
+SELECT * FROM USER_Source ORDER BY TYPE , NAME , LINE ;

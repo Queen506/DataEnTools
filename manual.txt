@@ -1,0 +1,96 @@
+npm init -y
+npm install oracledb@5.2.0
+===========================
+้สร้างโปนเจค
+npx create-react-app my-app // ถ้าerrใช้ npm config set legacy-peer-deps true
+cd my-app
+npm start // ถ้าerrใช้ npm install --save-dev ajv@^7 
+
+===========================
+-- สร้างฐานข้อมูล
+CREATE DATABASE ETLProject;
+USE ETLProject;
+
+-- ตาราง Customer
+CREATE TABLE Customer (
+    Cus_ID INT(10) PRIMARY KEY,
+    Cus_Username VARCHAR(50) NOT NULL,
+    Cus_Auth VARCHAR(50) NOT NULL
+);
+
+-- ตาราง Project
+CREATE TABLE Project (
+    Project_ID INT(10) PRIMARY KEY,
+    Project_Name VARCHAR(100) NOT NULL,
+    Project_Description TEXT,
+    Project_CreatedDate DATETIME,
+    Project_UpdatedDate DATETIME,
+    Project_DeletedDate DATETIME,
+    Cus_ID INT(10),  -- Foreign Key
+    FOREIGN KEY (Cus_ID) REFERENCES Customer(Cus_ID) ON DELETE CASCADE
+);
+
+-- ตาราง WorkStatus
+CREATE TABLE WorkStatus (
+    WorkStatus_ID INT(10) PRIMARY KEY,
+    WorkStatus_Name VARCHAR(100) NOT NULL
+);
+
+-- ตาราง Task
+CREATE TABLE Task (
+    Task_ID INT(10) PRIMARY KEY,
+    Task_Name VARCHAR(100) NOT NULL,
+    Task_Description TEXT,
+    Project_ID INT(10),  -- Foreign Key
+    WorkStatus_ID INT(10),  -- Foreign Key
+    FOREIGN KEY (Project_ID) REFERENCES Project(Project_ID) ON DELETE CASCADE,
+    FOREIGN KEY (WorkStatus_ID) REFERENCES WorkStatus(WorkStatus_ID)
+);
+
+-- ตาราง ETLProcess
+CREATE TABLE ETLProcess (
+    ETLProcess_ID INT(10) PRIMARY KEY,
+    ETLProcess_ProcessName VARCHAR(100) NOT NULL,
+    ETLProcess_ProcessType VARCHAR(100) NOT NULL,
+    Task_ID INT(10),  -- Foreign Key
+    WorkStatus_ID INT(10),  -- Foreign Key
+    FOREIGN KEY (Task_ID) REFERENCES Task(Task_ID) ON DELETE CASCADE,
+    FOREIGN KEY (WorkStatus_ID) REFERENCES WorkStatus(WorkStatus_ID)
+);
+
+-- ตาราง DatabaseInfo 
+CREATE TABLE DatabaseInfo (
+    DB_ID INT(10) PRIMARY KEY,
+    DB_Name VARCHAR(100) NOT NULL,
+    DB_DataSource VARCHAR(100),
+    DB_ConnectionString TEXT,
+    DB_Query TEXT,
+    DB_DataContent TEXT,
+    DB_CreatedDate DATETIME
+);
+
+-- ตาราง Detail (Weak Entity)
+CREATE TABLE Detail (
+    Detail_ID INT(10),
+    ETLProcess_ID INT(10),  -- Foreign Key
+    Detail_Description TEXT,
+    Detail_CreatedDate DATETIME,
+    DB_ID INT(10),  -- Foreign Key
+    WorkStatus_ID INT(10),  -- Foreign Key
+    PRIMARY KEY (Detail_ID, ETLProcess_ID),  -- Composite Primary Key
+    FOREIGN KEY (ETLProcess_ID) REFERENCES ETLProcess(ETLProcess_ID) ON DELETE CASCADE,
+    FOREIGN KEY (DB_ID) REFERENCES DatabaseInfo(DB_ID),
+    FOREIGN KEY (WorkStatus_ID) REFERENCES WorkStatus(WorkStatus_ID)
+);
+
+
+
+
+
+
+-- - Customer 1-m Project
+-- - Project 1-m Task
+-- - Task 1-m ETLProcess
+-- - ETLProcess 1-m Detail (Weak Entity)
+-- - Detail (Weak Entity) m-1 Database
+-- - WorkStatus 1-m Task, ETLProcess, Detail (Weak Entity)
