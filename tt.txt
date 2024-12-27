@@ -1,0 +1,513 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+
+// แสดงสถานะที่อัพเดท
+const StatusPanel = ({ tasks }) => {
+  return (
+    <div className="workflow-bg">
+      <h2 className="workflow-title">Workflow Status</h2>
+      <table className="w-full status-table">
+        <thead>
+          <tr>
+            <th>Task Name</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((task, index) => (
+            <tr key={index}>
+              <td>{task.name}</td>
+              <td>
+                <span
+                  className={`task-status ${
+                    task.status === "Completed"
+                      ? "status-completed"
+                      : task.status === "In Progress"
+                      ? "status-in-progress"
+                      : "status-failed"
+                  }`}
+                >
+                  {task.status}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// ETL Task Categories
+const ETLTaskCategories = {
+  Connection: [
+    {
+      id: "mysql",
+      name: "mysql",
+      icon: "🔗",
+      description: "Connect to MySQL database",
+    },
+    {
+      id: "oracle",
+      name: "oracle",
+      icon: "🔗",
+      description: "Connect to oracle database",
+    },
+  ],
+  Extract: [
+    {
+      id: "database-extract",
+      name: "Database Extract",
+      icon: "💾",
+      description: "Extract data from various database sources",
+    },
+    {
+      id: "api-extract",
+      name: "API Extract",
+      icon: "🌐",
+      description: "Pull data from REST APIs",
+    },
+  ],
+  Transform: [
+    {
+      id: "filter",
+      name: "Filter",
+      icon: "✂️",
+      description: "Filter rows based on conditions",
+    },
+    {
+      id: "aggregate",
+      name: "Aggregate",
+      icon: "📊",
+      description: "Group and summarize data",
+    },
+    {
+      id: "join",
+      name: "Join",
+      icon: "🔗",
+      description: "Combine data from multiple sources",
+    },
+  ],
+  Load: [
+    {
+      id: "database-load",
+      name: "Database Load",
+      icon: "🗃️",
+      description: "Load data into target database",
+    },
+  ],
+};
+
+const ETLWorkflowBuilder = () => {
+  const [workflow, setWorkflow] = useState([]);
+  const [currentProject, setCurrentProject] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [connectionForm, setConnectionForm] = useState({
+    host: "",
+    user: "",
+    password: "",
+    database: "",
+    port: "3306",
+    type: "",
+  });
+  const [isConnected, setIsConnected] = useState(false);
+  const [tables, setTables] = useState([]);
+  const [selectedTable, setSelectedTable] = useState("");
+  const [tableData, setTableData] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  // stage
+  const openModal = (type) => {
+    setConnectionForm((prev) => ({ ...prev, type: type }));
+    setShowModal(true);
+  };
+  const closeModal = () => {
+    setShowModal(false);
+  };
+
+  // จัดการการกรอกฟอร์ม
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setConnectionForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // เชื่อมต่อฐานข้อมูล
+  const connectToDatabase = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/connect",
+        connectionForm
+      );
+      if (response.data.success) {
+        setIsConnected(true);
+        setTasks((prevTasks) => [
+          ...prevTasks,
+          {
+            name: `เชื่อมต่อกับ: ${connectionForm.database}@${connectionForm.host} (${connectionForm.type})`,
+            status: "Completed",
+            progress: 100,
+          },
+        ]);
+        fetchTables();
+        closeModal();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      setIsConnected(false);
+      setTasks((prevTasks) => [
+        ...prevTasks,
+        {
+          name: `เชื่อมต่อกับ: ${connectionForm.database}@${connectionForm.host} (${connectionForm.type})`,
+          status: "Failed",
+          progress: 0,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ดึงรายชื่อตาราง
+  const fetchTables = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/tables");
+      if (response.data.success) {
+        setTables(response.data.data);
+      }
+    } catch (err) {
+      setError("ไม่สามารถดึงรายชื่อตารางได้");
+    }
+  };
+
+  // ดึงข้อมูลจากตาราง
+  const fetchTableData = async (tableName) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/data/${tableName}`
+      );
+      if (response.data.success) {
+        setTableData(response.data.data);
+      }
+    } catch (err) {
+      setError("ไม่สามารถดึงข้อมูลจากตารางได้");
+      setTableData([]);
+    }
+  };
+
+  // จัดการเมื่อเลือกตาราง
+  const handleTableSelect = (e) => {
+    const tableName = e.target.value;
+    setSelectedTable(tableName);
+    if (tableName) {
+      fetchTableData(tableName);
+    } else {
+      setTableData([]);
+    }
+  };
+
+  const addTaskToWorkflow = (task) => {
+    setWorkflow([
+      ...workflow,
+      { ...task, id: `${task.id}-${workflow.length}` },
+    ]);
+  };
+
+  const removeTaskFromWorkflow = (taskId) => {
+    setWorkflow(workflow.filter((task) => task.id !== taskId));
+  };
+
+  const saveWorkflow = async () => {
+    try {
+      const response = await axios.post("/api/workflow", {
+        projectId: currentProject?.id,
+        workflow,
+      });
+      // Handle successful workflow save
+    } catch (error) {
+      console.error("Workflow save error:", error);
+    }
+  };
+
+  /* //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
+  return (
+    <div className="flex">
+      {/* ETL Tasks - 20% of the screen width */}
+      <div className="etl-tasks">
+        <h2 className="font-bold mb-4">ETL Tasks</h2>
+        {Object.entries(ETLTaskCategories).map(([category, tasks]) => (
+          <div key={category} className="mb-4">
+            <h3 className="font-semibold">{category}</h3>
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className="p-2 m-1 bg-white rounded cursor-pointer hover:bg-blue-100"
+                onClick={() => {
+                  addTaskToWorkflow(task); // เพิ่ม Task ลงใน Workflow
+                  if (task.id === "mysql" || task.id === "oracle") {
+                    openModal(task.id); // เปิด Modal สำหรับ MySQL หรือ Oracle
+                  } else if (task.id === "database-extract") {
+                    openModal("database-extract"); // เปิด Modal สำหรับ Database Extract
+                  } else if (task.id === "api-extract") {
+                    openModal("api-extract"); // เปิด Modal สำหรับ API Extract
+                  } else if (task.id === "filter") {
+                    openModal("filter"); // เปิด Modal สำหรับ API Extract
+                  } else if (task.id === "aggregate") {
+                    openModal("aggregate"); // เปิด Modal สำหรับ API Extract
+                  }
+                }}
+              >
+                <div className="flex-items">
+                  <span className="mr-2">{task.icon}</span>
+                  <span>{task.name}</span>
+                </div>
+                <p className="text-xs text-gray-500">{task.description}</p>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Current Workflow - 80% of the screen width */}
+      <div className="workflow-canvas">
+        <div className="flex-Workflow">
+          <h2 className="font-bold">Current Workflow</h2>
+          <button className="workflow-btn" onClick={saveWorkflow}>
+            Save Workflow
+          </button>
+        </div>
+        <div className="border-2 border-dashed p-4 min-h-[500px]">
+          {workflow.map((task, index) => (
+            <div key={task.id} className="workflow-task">
+              <div>
+                <span className="mr-2">{task.icon}</span>
+                {task.name}
+              </div>
+              <button
+                className="remove-btn"
+                onClick={() => removeTaskFromWorkflow(task.id)}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Status Panel on the Right */}
+      <div className="status-panel">
+        <StatusPanel tasks={tasks} />
+      </div>
+
+      {/* Database Connect */}
+      {showModal && (
+        <div className="modal-backdrop" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="close-btn" onClick={closeModal}>
+              ✖️
+            </button>
+
+            {error && <div className="error-message">{error}</div>}
+            {/* เชื่อมต่อฐานข้อมูล MySQL หรือ Oracle */}
+            {connectionForm.type === "mysql" ||
+            connectionForm.type === "oracle" ? (
+              <>
+                {/* เชื่อมต่อฐานข้อมูล MySQL */}
+                <div className="connection-form">
+                  {connectionForm.type === "mysql" && (
+                    <>
+                      <h2>เชื่อมต่อฐานข้อมูล ({connectionForm.type})</h2>
+                      <form onSubmit={connectToDatabase}>
+                        <div className="form-group">
+                          <label>Port:</label>
+                          <input
+                            type="text"
+                            name="port"
+                            value={connectionForm.port}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Database:</label>
+                          <input
+                            type="text"
+                            name="database"
+                            value={connectionForm.database}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Username:</label>
+                          <input
+                            type="text"
+                            name="user"
+                            value={connectionForm.user}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Password:</label>
+                          <input
+                            type="password"
+                            name="password"
+                            value={connectionForm.password}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        <button type="submit" disabled={loading}>
+                          {loading ? "กำลังเชื่อมต่อ..." : "เชื่อมต่อ"}
+                        </button>
+                      </form>
+                    </>
+                  )}
+                  {/* เชื่อมต่อฐานข้อมูล Oracle */}
+                  {connectionForm.type === "oracle" && (
+                    <>
+                      <h2>เชื่อมต่อฐานข้อมูล ({connectionForm.type})</h2>
+                      <form onSubmit={connectToDatabase}>
+                        <div className="form-group">
+                          <label>Connect String:</label>
+                          <input
+                            type="text"
+                            name="connectString"
+                            value={connectionForm.connectString}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Username:</label>
+                          <input
+                            type="text"
+                            name="user"
+                            value={connectionForm.user}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Password:</label>
+                          <input
+                            type="password"
+                            name="password"
+                            value={connectionForm.password}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        <button type="submit" disabled={loading}>
+                          {loading ? "กำลังเชื่อมต่อ..." : "เชื่อมต่อ"}
+                        </button>
+                      </form>
+                    </>
+                  )}
+                </div>
+                {/* เมื่อเชื่อมต่อฐานข้อมูลแล้ว */}
+                {isConnected && (
+                  <div className="database-content">
+                    <div className="connection-info">
+                      <p>
+                        เชื่อมต่อกับ: {connectionForm.database}@
+                        {connectionForm.host}
+                      </p>
+                      <button onClick={() => setIsConnected(false)}>
+                        ยกเลิกการเชื่อมต่อ
+                      </button>
+                    </div>
+
+                    <div className="table-select">
+                      <label>เลือกตาราง: </label>
+                      <select
+                        value={selectedTable}
+                        onChange={handleTableSelect}
+                      >
+                        <option value="">-- เลือกตาราง --</option>
+                        {tables.map((table, index) => (
+                          <option key={index} value={table}>
+                            {table}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {tableData.length > 0 && (
+                      <div className="table-container">
+                        <h3>ข้อมูลจากตาราง: {selectedTable}</h3>
+                        <table>
+                          <thead>
+                            <tr>
+                              {Object.keys(tableData[0]).map(
+                                (column, index) => (
+                                  <th key={index}>{column}</th>
+                                )
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tableData.map((row, rowIndex) => (
+                              <tr key={rowIndex}>
+                                {Object.values(row).map(
+                                  (value, columnIndex) => (
+                                    <td key={columnIndex}>{value}</td>
+                                  )
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : null}
+
+            {/* Extract Task */}
+            {connectionForm.type === "database-extract" && (
+              <div className="database-extract-message">
+                <h2>Hello</h2>
+                <p>This is a message for the database-extract task.</p>
+              </div>
+            )}
+            {connectionForm.type === "api-extract" && (
+              <div className="api-extract-message">
+                <h2>API Extract Task</h2>
+                <p>This is a message for the API-extract task.</p>
+              </div>
+            )}
+            {/* Transform Task */}
+            {connectionForm.type === "filter" && (
+              <div className="filter-message">
+                <h2>Hello</h2>
+                <p>This is a message for the database-extract task.</p>
+              </div>
+            )}
+            {connectionForm.type === "aggregate" && (
+              <div className="aggregate-message">
+                <h2>API Extract Task</h2>
+                <p>This is a message for the API-extract task.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ETLWorkflowBuilder;

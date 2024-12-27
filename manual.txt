@@ -6,6 +6,8 @@ npx create-react-app my-app // ถ้าerrใช้ npm config set legacy-peer-
 cd my-app
 npm start // ถ้าerrใช้ npm install --save-dev ajv@^7 
 
+node index.js //backend
+
 ===========================
 -- สร้างฐานข้อมูล
 CREATE DATABASE ETLProject;
@@ -13,14 +15,14 @@ USE ETLProject;
 
 -- ตาราง Customer
 CREATE TABLE Customer (
-    Cus_ID INT(10) PRIMARY KEY,
+    Cus_ID INT(10) AUTO_INCREMENT PRIMARY KEY,
     Cus_Username VARCHAR(50) NOT NULL,
     Cus_Auth VARCHAR(50) NOT NULL
 );
 
 -- ตาราง Project
 CREATE TABLE Project (
-    Project_ID INT(10) PRIMARY KEY,
+    Project_ID INT(10) AUTO_INCREMENT PRIMARY KEY,
     Project_Name VARCHAR(100) NOT NULL,
     Project_Description TEXT,
     Project_CreatedDate DATETIME,
@@ -32,13 +34,13 @@ CREATE TABLE Project (
 
 -- ตาราง WorkStatus
 CREATE TABLE WorkStatus (
-    WorkStatus_ID INT(10) PRIMARY KEY,
+    WorkStatus_ID INT(10) AUTO_INCREMENT PRIMARY KEY,
     WorkStatus_Name VARCHAR(100) NOT NULL
 );
 
 -- ตาราง Task
 CREATE TABLE Task (
-    Task_ID INT(10) PRIMARY KEY,
+    Task_ID INT(10) AUTO_INCREMENT PRIMARY KEY,
     Task_Name VARCHAR(100) NOT NULL,
     Task_Description TEXT,
     Project_ID INT(10),  -- Foreign Key
@@ -49,7 +51,7 @@ CREATE TABLE Task (
 
 -- ตาราง ETLProcess
 CREATE TABLE ETLProcess (
-    ETLProcess_ID INT(10) PRIMARY KEY,
+    ETLProcess_ID INT(10) AUTO_INCREMENT PRIMARY KEY,
     ETLProcess_ProcessName VARCHAR(100) NOT NULL,
     ETLProcess_ProcessType VARCHAR(100) NOT NULL,
     Task_ID INT(10),  -- Foreign Key
@@ -60,7 +62,7 @@ CREATE TABLE ETLProcess (
 
 -- ตาราง DatabaseInfo 
 CREATE TABLE DatabaseInfo (
-    DB_ID INT(10) PRIMARY KEY,
+    DB_ID INT(10) AUTO_INCREMENT PRIMARY KEY,
     DB_Name VARCHAR(100) NOT NULL,
     DB_DataSource VARCHAR(100),
     DB_ConnectionString TEXT,
@@ -71,7 +73,7 @@ CREATE TABLE DatabaseInfo (
 
 -- ตาราง Detail (Weak Entity)
 CREATE TABLE Detail (
-    Detail_ID INT(10),
+    Detail_ID INT(10) AUTO_INCREMENT,
     ETLProcess_ID INT(10),  -- Foreign Key
     Detail_Description TEXT,
     Detail_CreatedDate DATETIME,
